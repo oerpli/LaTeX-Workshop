@@ -1,7 +1,6 @@
 import * as vscode from 'vscode'
 import * as path from 'path'
 import { readFileSync } from 'fs'
-
 import { Extension } from '../main'
 
 export class BuildInfo {
@@ -115,41 +114,40 @@ export class BuildInfo {
                 this.currentBuild.ruleName = ruleName
                 this.currentBuild.ruleProducesPages = undefined
                 this.currentBuild.stepTimes[`${++this.currentBuild.ruleNumber}-${this.currentBuild.ruleName}`] = {}
-                this.displayProgress(0)
+                this.showNotificationProgress(ruleName)
                 this.currentBuild.lastStepTime = +new Date()
             }
         } else if (this.currentBuild.stdout.match(rulePdfLatexStart)) {
             this.currentBuild.ruleName = 'pdfLaTeX'
             this.currentBuild.ruleProducesPages = true
             this.currentBuild.stepTimes[`${++this.currentBuild.ruleNumber}-${this.currentBuild.ruleName}`] = {}
-            this.displayProgress(0)
+            this.showNotificationProgress("pdfLaTeX")
             this.currentBuild.lastStepTime = +new Date()
         } else if (this.currentBuild.stdout.match(ruleBibtexStart)) {
             this.currentBuild.ruleName = 'BibTeX'
             this.currentBuild.ruleProducesPages = false
             this.currentBuild.stepTimes[`${++this.currentBuild.ruleNumber}-${this.currentBuild.ruleName}`] = {}
-            this.displayProgress(0)
+            this.showNotificationProgress("BibTeX")
             this.currentBuild.lastStepTime = +new Date()
         } else if (this.currentBuild.stdout.match(ruleSageStart)) {
             this.currentBuild.ruleName = 'Sage'
             this.currentBuild.ruleProducesPages = false
             this.currentBuild.stepTimes[`${++this.currentBuild.ruleNumber}-${this.currentBuild.ruleName}`] = {}
-            this.displayProgress(0)
+            this.showNotificationProgress("Sage")
             this.currentBuild.lastStepTime = +new Date()
         } else if (this.currentBuild.stdout.match(ruleLuaTexStart)) {
             this.currentBuild.ruleName = 'LuaTex'
             this.currentBuild.ruleProducesPages = true
             this.currentBuild.stepTimes[`${++this.currentBuild.ruleNumber}-${this.currentBuild.ruleName}`] = {}
-            this.displayProgress(0)
+            this.showNotificationProgress("LuaTex")
             this.currentBuild.lastStepTime = +new Date()
         }
         // TODO: Add more rules
     }
 
+
     public showPanel() {
-        if (this.panel) {
-            return
-        }
+        if (this.panel) { return }
         this.panel = vscode.window.createWebviewPanel(
             'compilationInfo',
             'LaTeX Compilation Live Info',
@@ -169,10 +167,10 @@ export class BuildInfo {
         webviewHtml = webviewHtml.replace(
             /vscode-resource:\.\//,
             'vscode-resource:' +
-                vscode.Uri.file(path.join(this.extension.extensionRoot, 'resources', 'buildinfo')).with({
-                    scheme: 'vscode-resource'
-                }).path +
-                '/'
+            vscode.Uri.file(path.join(this.extension.extensionRoot, 'resources', 'buildinfo')).with({
+                scheme: 'vscode-resource'
+            }).path +
+            '/'
         )
         this.panel.webview.html = webviewHtml
 
@@ -187,13 +185,28 @@ export class BuildInfo {
         }
     }
 
-    private displayProgress(current: string | number) {
+    private showNotificationProgress(rootPath: string) {
+        vscode.window.withProgress({
+            location: vscode.ProgressLocation.Notification,
+            title: `Building ${rootPath}`,
+            cancellable: false
+        }, (progress, token) => {
+            token.onCancellationRequested(() => {
+                console.log("Cancel build actually!")
+                console.log("Build cancelled.");
+            });
+            this.displayProgress(0, progress)
+            return new Promise(resolve => resolve())
+        });
+    }
+
+
+    private displayProgress(current: string | number, progressBar?: vscode.Progress<{ message: string; increment: number; }>) {
         if (!this.currentBuild) {
             throw Error('Can\'t Display Progress for non-Started build - see BuildInfo.buildStarted()')
         }
 
         this.configuration = vscode.workspace.getConfiguration('latex-workshop')
-
         if (current === 0) {
             this.currentBuild.stepTimes[`${this.currentBuild.ruleNumber}-${this.currentBuild.ruleName}`][
                 `T${+new Date()}-Wait Time`
@@ -293,13 +306,12 @@ export class BuildInfo {
             const wholeCharacter = characterSets[selectedCharacterSet].wholeCharacter
             const partialCharacter =
                 characterSets[selectedCharacterSet].partialCharacters[
-                    Math.round(
-                        (length * proportion - wholeCharacters) *
-                            (characterSets[selectedCharacterSet].partialCharacters.length - 1)
-                    )
+                Math.round(
+                    (length * proportion - wholeCharacters) *
+                    (characterSets[selectedCharacterSet].partialCharacters.length - 1)
+                )
                 ]
             const blankCharacter = characterSets[selectedCharacterSet].blankCharacter
-
             return (
                 wholeCharacter.repeat(wholeCharacters) +
                 partialCharacter +
@@ -419,12 +431,16 @@ export class BuildInfo {
                 current = parseInt(current)
             }
             const currentAsString = current.toString()
-            const endpointAsString = this.currentBuild.pageTotal ? '/' + this.currentBuild.pageTotal.toString(): ''
+            const endpointAsString = this.currentBuild.pageTotal ? '/' + this.currentBuild.pageTotal.toString() : ''
+            const percent = this.currentBuild.pageTotal ? current / this.currentBuild.pageTotal : 0
             const barAsString = this.currentBuild.pageTotal
-                ? generateProgressBar(current / this.currentBuild.pageTotal, this.configuration.get(
-                      'progress.barLength'
-                  ) as number)
+                ? generateProgressBar(percent, this.configuration.get(
+                    'progress.barLength'
+                ) as number)
                 : ''
+            if (progressBar) {
+                progressBar.report({ message: "Test", increment: percent })
+            }
             this.status.text = `${runIcon}  Page ${padRight(
                 currentAsString + endpointAsString,
                 this.currentBuild.pageTotal ? this.currentBuild.pageTotal.toString().length * 2 + 2 : 6
