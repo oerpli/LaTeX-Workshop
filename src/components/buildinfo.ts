@@ -121,25 +121,25 @@ export class BuildInfo {
             this.currentBuild.ruleName = 'pdfLaTeX'
             this.currentBuild.ruleProducesPages = true
             this.currentBuild.stepTimes[`${++this.currentBuild.ruleNumber}-${this.currentBuild.ruleName}`] = {}
-            this.showNotificationProgress("pdfLaTeX")
+            this.showNotificationProgress('pdfLaTeX')
             this.currentBuild.lastStepTime = +new Date()
         } else if (this.currentBuild.stdout.match(ruleBibtexStart)) {
             this.currentBuild.ruleName = 'BibTeX'
             this.currentBuild.ruleProducesPages = false
             this.currentBuild.stepTimes[`${++this.currentBuild.ruleNumber}-${this.currentBuild.ruleName}`] = {}
-            this.showNotificationProgress("BibTeX")
+            this.showNotificationProgress('BibTeX')
             this.currentBuild.lastStepTime = +new Date()
         } else if (this.currentBuild.stdout.match(ruleSageStart)) {
             this.currentBuild.ruleName = 'Sage'
             this.currentBuild.ruleProducesPages = false
             this.currentBuild.stepTimes[`${++this.currentBuild.ruleNumber}-${this.currentBuild.ruleName}`] = {}
-            this.showNotificationProgress("Sage")
+            this.showNotificationProgress('Sage')
             this.currentBuild.lastStepTime = +new Date()
         } else if (this.currentBuild.stdout.match(ruleLuaTexStart)) {
             this.currentBuild.ruleName = 'LuaTex'
             this.currentBuild.ruleProducesPages = true
             this.currentBuild.stepTimes[`${++this.currentBuild.ruleNumber}-${this.currentBuild.ruleName}`] = {}
-            this.showNotificationProgress("LuaTex")
+            this.showNotificationProgress('LuaTex')
             this.currentBuild.lastStepTime = +new Date()
         }
         // TODO: Add more rules
@@ -192,16 +192,16 @@ export class BuildInfo {
             cancellable: false
         }, (progress, token) => {
             token.onCancellationRequested(() => {
-                console.log("Cancel build actually!")
-                console.log("Build cancelled.");
-            });
+                console.log('Cancel build actually!')
+                console.log('Build cancelled.')
+            })
             this.displayProgress(0, progress)
             return new Promise(resolve => resolve())
-        });
+        })
     }
 
 
-    private displayProgress(current: string | number, progressBar?: vscode.Progress<{ message: string; increment: number; }>) {
+    private displayProgress(current: string | number, progressBar?: vscode.Progress<{ message: string, increment: number }>) {
         if (!this.currentBuild) {
             throw Error('Can\'t Display Progress for non-Started build - see BuildInfo.buildStarted()')
         }
@@ -439,7 +439,7 @@ export class BuildInfo {
                 ) as number)
                 : ''
             if (progressBar) {
-                progressBar.report({ message: "Test", increment: percent })
+                progressBar.report({ message: 'Test', increment: percent })
             }
             this.status.text = `${runIcon}  Page ${padRight(
                 currentAsString + endpointAsString,
